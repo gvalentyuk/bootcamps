@@ -1,5 +1,6 @@
 const express = require('express')
 const dotenv = require('dotenv')
+const errorHandler = require('./middleware/errorHandler')
 const morgan = require('morgan')
 const connectDB = require('./config/db')
 
@@ -21,6 +22,9 @@ connectDB()
 
 //Mount routes
 app.use('/api/bootcamps', require('./routes/bootcamps'))
+
+//Error handler
+app.use(errorHandler)
 
 const server = app.listen(process.env.PORT,
     ()=> console.log(`Server has been run in the ${process.env.NODE_ENV} mode on the ${process.env.PORT} port`)

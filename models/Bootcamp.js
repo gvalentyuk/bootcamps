@@ -1,4 +1,6 @@
 const {model, Schema} = require('mongoose')
+const geocoder = require('../utills/geocoder')
+const slugify = require('slugify')
 
 const Bootcamp = new Schema({
     name: {
@@ -52,7 +54,7 @@ const Bootcamp = new Schema({
         street: String,
         state: String
     },
-    careers:{
+    careers: {
         type: [String],
         required: true,
         enum: [
@@ -66,27 +68,27 @@ const Bootcamp = new Schema({
     },
     averageRating: {
         type: Number,
-        min:[1, 'Rating must be at least 1'],
-        max:[10, 'Rating must can not be more than 10']
+        min: [1, 'Rating must be at least 1'],
+        max: [10, 'Rating must can not be more than 10']
     },
     averageCost: Number,
     photo: {
         type: String,
-        default:'no-photo.jpg'
+        default: 'no-photo.jpg'
     },
     housing: {
         type: Boolean,
         default: false
     },
-    jobAssistance:{
+    jobAssistance: {
         type: Boolean,
         default: false
     },
-    jobGuarantee:{
+    jobGuarantee: {
         type: Boolean,
         default: false
     },
-    acceptGi:{
+    acceptGi: {
         type: Boolean,
         default: false
     },
@@ -94,6 +96,28 @@ const Bootcamp = new Schema({
         type: Date,
         default: Date.now
     }
+})
+
+Bootcamp.pre('save', function (next) {
+    this.slug = slugify(this.name, {lower: true})
+    next()
+})
+
+Bootcamp.pre('save', async function (next) {
+    let loc = await geocoder.geocode(this.address)
+    this.location = {
+        type: 'Point',
+        coordinates: [loc[0].longitude, loc[0].latitude],
+        formattedAddress: loc[0].formattedAddress,
+        zipcode: loc[0].zipcode,
+        country: loc[0].countryCode,
+        city: loc[0].city,
+        street: loc[0].streetName,
+        state: loc[0].stateCode
+    }
+
+    this.address = undefined
+    next()
 })
 
 module.exports = model('Bootcamp', Bootcamp)
