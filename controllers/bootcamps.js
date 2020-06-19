@@ -3,7 +3,7 @@ const asyncHandler = require('../middleware/asyncHandler')
 const geocoder = require('../utills/geocoder')
 const Bootcamp = require('../models/Bootcamp')
 
-//@route    /api/bootcamps
+//@route    GET /api/bootcamps
 //@access   Public
 //@desc     Get all bootcamps
 exports.getBootcamps = asyncHandler(async (req, res, next) => {
@@ -15,7 +15,7 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
     removeField.forEach(field => delete reqQuery[field])
     let queryStr = JSON.stringify(reqQuery)
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`)
-    query = Bootcamp.find(JSON.parse(queryStr))
+    query = Bootcamp.find(JSON.parse(queryStr)).populate('courses')
 
     //select
     if (req.query.select) {
@@ -65,11 +65,11 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
     })
 })
 
-//@route    /api/bootcamps/:id
+//@route    GET /api/bootcamps/:id
 //@access   Public
 //@desc     Get bootcamp by id
 exports.getBootcampById = asyncHandler(async (req, res, next) => {
-    const bootcamp = await Bootcamp.findById(req.params.id)
+    const bootcamp = await Bootcamp.findById(req.params.id).populate('courses')
 
     if (!bootcamp) {
         return next(new ErrorResponse(`Bootcamp by id ${req.params.id} not found`, 404))
@@ -78,7 +78,7 @@ exports.getBootcampById = asyncHandler(async (req, res, next) => {
     return res.status(200).json({success: true, data: bootcamp})
 })
 
-//@route    /api/bootcamps
+//@route    POST /api/bootcamps
 //@access   Private
 //@desc     Post new bootcamp
 exports.createBootcamp = asyncHandler(async (req, res, next) => {
@@ -90,7 +90,7 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
     })
 })
 
-//@route    /api/bootcamps/:id
+//@route    PUT /api/bootcamps/:id
 //@access   Private
 //@desc     Update bootcamp
 exports.updateBootcamp = asyncHandler(async (req, res, next) => {
@@ -106,15 +106,17 @@ exports.updateBootcamp = asyncHandler(async (req, res, next) => {
     return res.status(200).json({success: true, data: bootcamp})
 })
 
-//@route    /api/bootcamps/:id
+//@route    DELETE /api/bootcamps/:id
 //@access   Private
 //@desc     Delete bootcamp
 exports.deleteBootcamp = asyncHandler(async (req, res, next) => {
-    const bootcamp = await Bootcamp.findByIdAndDelete(req.params.id)
+    const bootcamp = await Bootcamp.findById(req.params.id)
+
+    bootcamp.remove()
     return res.status(200).json({success: true, data: bootcamp})
 })
 
-//@route    /api/bootcamps/radius/:zipcode/:distance
+//@route    GET /api/bootcamps/radius/:zipcode/:distance
 //@access   Public
 //@desc     Get bootcamps with radius
 exports.getBootcampswithRadius = asyncHandler(async (req, res, next) => {

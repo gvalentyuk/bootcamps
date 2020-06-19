@@ -1,6 +1,7 @@
 const express = require('express')
 const dotenv = require('dotenv')
 const errorHandler = require('./middleware/errorHandler')
+var cookieParser = require('cookie-parser')
 const morgan = require('morgan')
 const connectDB = require('./config/db')
 
@@ -20,8 +21,13 @@ if(process.env.NODE_ENV=='development'){
 //Connect to db
 connectDB()
 
+//Mount cookie-parser
+app.use(cookieParser())
+
 //Mount routes
 app.use('/api/bootcamps', require('./routes/bootcamps'))
+app.use('/api/courses', require('./routes/courses'))
+app.use('/api/auth', require('./routes/auth'))
 
 //Error handler
 app.use(errorHandler)

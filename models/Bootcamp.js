@@ -96,6 +96,9 @@ const Bootcamp = new Schema({
         type: Date,
         default: Date.now
     }
+}, {
+    toJSON: {virtuals: true},
+    toObject: {virtuals: true}
 })
 
 Bootcamp.pre('save', function (next) {
@@ -118,6 +121,18 @@ Bootcamp.pre('save', async function (next) {
 
     this.address = undefined
     next()
+})
+
+Bootcamp.pre('remove', async function(next){
+    await this.Model('Course').deleteMany({bootcamp: this._id})
+    next()
+})
+
+Bootcamp.virtual('courses',{
+    ref: 'Course',
+    localField:'_id',
+    foreignField: 'bootcamp',
+    justOne: false
 })
 
 module.exports = model('Bootcamp', Bootcamp)
