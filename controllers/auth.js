@@ -47,7 +47,7 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
 //@route    GET /api/auth/me
 //@access   Private
 //@desc     Get my profile
-exports.getMyProfile = asyncHandler(async (req,res, next) => {
+exports.getMyProfile = asyncHandler(async (req, res, next) => {
     const user = await User.findById(req.user.id)
 
     return res.status(200).json({
@@ -56,11 +56,25 @@ exports.getMyProfile = asyncHandler(async (req,res, next) => {
     })
 })
 
+//@route    GET /api/auth/logout
+//@access   Private
+//@desc     Logout
+exports.logout = asyncHandler(async (req, res, next) => {
+    res.cookie('token', 'none', {
+        expires: new Date(Date.now() +10 *1000),
+        httpOnly: true
+    })
+
+    return res.status(200).json({
+        success: true
+    })
+})
+
 
 //@route    PUT /api/auth/updatedetails
 //@access   Private
 //@desc     Update user details
-exports.updateDetails = asyncHandler(async (req,res, next) => {
+exports.updateDetails = asyncHandler(async (req, res, next) => {
     const details = {
         email: req.body.email,
         name: req.body.name
@@ -81,10 +95,10 @@ exports.updateDetails = asyncHandler(async (req,res, next) => {
 //@route    PUT /api/auth/updatepassword
 //@access   Private
 //@desc     Update password
-exports.updatePassword = asyncHandler(async (req,res, next) => {
+exports.updatePassword = asyncHandler(async (req, res, next) => {
     const user = await User.findById(req.user.id).select('+password')
 
-    if(!(await user.matchPassword(req.body.currentPassword))){
+    if (!(await user.matchPassword(req.body.currentPassword))) {
         return next(new ErrorResponse('Incorrect password'))
     }
     user.password = req.body.newPassword
@@ -96,31 +110,31 @@ exports.updatePassword = asyncHandler(async (req,res, next) => {
 //@route    POST /api/auth/forgotpassword
 //@access   Public
 //@desc     Forgot password
-exports.forgotPassword = asyncHandler(async (req,res, next) => {
-    const user = await User.findOne({email:req.body.email})
+exports.forgotPassword = asyncHandler(async (req, res, next) => {
+    const user = await User.findOne({email: req.body.email})
 
-    if(!user){
+    if (!user) {
         return next(new ErrorResponse(`User with ${req.body.email} nod found`))
     }
 
     const resetToken = user.getResetPasswordToken()
 
-    await user.save({validateBeforeSave:false})
+    await user.save({validateBeforeSave: false})
 
     const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/forgotpassword/${resetToken}`
 
     const message = `You are receiving this email because you 
         has requested the reset of a password. Please make a PUT request to \n\n ${resetUrl}`
 
-    try{
+    try {
         await sendEmail({
             email: user.email,
             subject: 'Password reset token',
             message
         })
 
-        return res.status(200).json({success: true, data:'Email send'})
-    }catch (e) {
+        return res.status(200).json({success: true, data: 'Email send'})
+    } catch (e) {
         user.resetPasswordToken = undefined
         user.resetPasswordExpire = undefined
 
@@ -135,7 +149,7 @@ exports.forgotPassword = asyncHandler(async (req,res, next) => {
 //@route    POST /api/auth/forgotpassword/:resetPasswordToken
 //@access   Public
 //@desc     Reset password
-exports.resetPassword = asyncHandler(async (req,res, next) => {
+exports.resetPassword = asyncHandler(async (req, res, next) => {
     const resetPasswordToken = crypto
         .createHash('sha256')
         .update(req.params.resetPasswordToken)
@@ -146,7 +160,7 @@ exports.resetPassword = asyncHandler(async (req,res, next) => {
         resetPasswordExpire: {$gt: Date.now()}
     })
 
-    if(!user){
+    if (!user) {
         return next(new ErrorResponse('Invalid token', 400))
     }
 
