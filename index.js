@@ -28,6 +28,7 @@ app.use(cookieParser())
 app.use('/api/bootcamps', require('./routes/bootcamps'))
 app.use('/api/courses', require('./routes/courses'))
 app.use('/api/auth', require('./routes/auth'))
+app.use('/api/reviews', require('./routes/reviews'))
 
 //Error handler
 app.use(errorHandler)

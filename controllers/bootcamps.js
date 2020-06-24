@@ -7,62 +7,7 @@ const Bootcamp = require('../models/Bootcamp')
 //@access   Public
 //@desc     Get all bootcamps
 exports.getBootcamps = asyncHandler(async (req, res, next) => {
-    let query;
-    let reqQuery = {...req.query}
-
-    //exclude field
-    let removeField = ['select', 'sort', 'page', 'limit']
-    removeField.forEach(field => delete reqQuery[field])
-    let queryStr = JSON.stringify(reqQuery)
-    queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`)
-    query = Bootcamp.find(JSON.parse(queryStr)).populate('courses')
-
-    //select
-    if (req.query.select) {
-        const fields = req.query.select.split(',').join(' ')
-        query = query.select(fields)
-    }
-
-    //sort
-    if (req.query.sort) {
-        const fields = req.query.sort.split(',').join(' ')
-        query = query.sort(fields)
-    } else {
-        query = query.sort('-createdAt')
-    }
-
-    //pagination
-    let page = parseInt(req.query.page) || 1
-    let limit = parseInt(req.query.limit) || 1
-    let startIndex = (page - 1) * limit
-    let endIndex = page * limit
-    let total = await Bootcamp.countDocuments()
-
-    query = query.skip(startIndex).limit(limit)
-
-    const bootcamps = await query
-
-    let pagination = {}
-
-    if (endIndex < total) {
-        pagination.next = {
-            page: page + 1,
-            limit
-        }
-    }
-
-    if (startIndex > 0) {
-        pagination.prev = {
-            page: page - 1,
-            limit
-        }
-    }
-
-    return res.status(200).json({
-        success: true,
-        data: bootcamps,
-        pagination
-    })
+    return res.status(200).json(res.advancedResults)
 })
 
 //@route    GET /api/bootcamps/:id
@@ -82,6 +27,13 @@ exports.getBootcampById = asyncHandler(async (req, res, next) => {
 //@access   Private
 //@desc     Post new bootcamp
 exports.createBootcamp = asyncHandler(async (req, res, next) => {
+    req.body.user = req.user.id
+
+    const publishedBootcamp = await Bootcamp.findOne({user: req.user.id})
+    if (publishedBootcamp && req.user.role !== 'admin') {
+        return next(new ErrorResponse(`The user with id ${req.user.id} has already published a bootcamp`, 400))
+    }
+
     const bootcamp = await Bootcamp.create(req.body)
     return res.status(200).json({
         success: true,
@@ -94,15 +46,19 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
 //@access   Private
 //@desc     Update bootcamp
 exports.updateBootcamp = asyncHandler(async (req, res, next) => {
-    const bootcamp = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-        runValidators: true
-    })
+    let bootcamp = await Bootcamp.findById(req.params.id)
 
     if (!bootcamp) {
         return next(new ErrorResponse(`Bootcamp by id ${req.params.id} not found`, 404))
     }
 
+    if (bootcamp.user.toString() !== req.user.id && req.user.role !== 'admin') {
+        return next(new ErrorResponse(`User ${req.params.id} is not authorized to update this bootcamp`, 401))
+    }
+    bootcamp = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+        runValidators: true
+    })
     return res.status(200).json({success: true, data: bootcamp})
 })
 
@@ -111,6 +67,10 @@ exports.updateBootcamp = asyncHandler(async (req, res, next) => {
 //@desc     Delete bootcamp
 exports.deleteBootcamp = asyncHandler(async (req, res, next) => {
     const bootcamp = await Bootcamp.findById(req.params.id)
+
+    if (bootcamp.user.toString() !== req.user.id && req.user.role !== 'admin') {
+        return next(new ErrorResponse(`User ${req.params.id} is not authorized to delete this bootcamp`, 401))
+    }
 
     bootcamp.remove()
     return res.status(200).json({success: true, data: bootcamp})
